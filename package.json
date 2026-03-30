@@ -1,5 +1,5 @@
 {
-  "name": "puzzle-auth-master",
+  "name": "final-auth-app",
   "version": "1.0.0",
   "main": "netlify/functions/api.js",
   "dependencies": {
