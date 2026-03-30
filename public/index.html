@@ -2,73 +2,92 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure System</title>
+    <title>Gold Draw & Win</title>
     <style>
-        body { font-family: sans-serif; background: #121212; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; }
-        .card { background: #1e1e1e; padding: 30px; border-radius: 15px; width: 300px; text-align: center; border: 1px solid #333; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: white; box-sizing: border-box; }
-        #cap svg { width: 100%; height: 80px; background: #fff; border-radius: 8px; cursor: pointer; margin-bottom: 10px; }
-        button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 100; flex-direction: column; justify-content: center; align-items: center; }
-        .loader { border: 4px solid #333; border-top: 4px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: white; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .card { background: #1a1a1a; padding: 30px; border-radius: 20px; width: 320px; text-align: center; border: 2px solid #d4af37; box-shadow: 0 0 20px rgba(212, 175, 55, 0.2); }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: linear-gradient(45deg, #d4af37, #f9d976); color: black; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; }
+        .token-display { font-size: 48px; color: #ffd700; margin: 20px 0; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        #dashboard { display: none; }
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; }
+        .spinner { border: 4px solid #333; border-top: 4px solid #ffd700; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div id="overlay">
-        <div class="loader"></div>
-        <div id="status">Connecting...</div>
-    </div>
-    <div class="card">
-        <h2 id="title">Login</h2>
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="pass" placeholder="Password">
-        <div id="cap" onclick="getCaptcha()"></div>
-        <input type="text" id="ans" placeholder="Enter Captcha">
-        <button onclick="submitData()">Submit</button>
-        <p onclick="toggle()" id="toggle-text" style="cursor:pointer; color:#007bff; margin-top:15px; font-size:14px;">Need an account? Register</p>
-    </div>
 
-    <script>
-        let isLogin = true; let capId = "";
-        async function getCaptcha() {
-            const r = await fetch('/.netlify/functions/api/captcha');
-            capId = r.headers.get('x-captcha-id');
-            document.getElementById('cap').innerHTML = await r.text();
+<div id="overlay">
+    <div class="spinner"></div>
+    <h2 id="status">Processing...</h2>
+</div>
+
+<div class="card" id="auth-box">
+    <h2 id="title">Gold Token Access</h2>
+    <input type="email" id="email" placeholder="Email Address">
+    <input type="password" id="pass" placeholder="Password">
+    <button onclick="handleAuth()">Enter System</button>
+    <p id="sw" onclick="swap()" style="color:#aaa; cursor:pointer; margin-top:15px; font-size:13px;">New user? Register here</p>
+</div>
+
+<div class="card" id="dashboard">
+    <h2>Your Gold Balance</h2>
+    <div class="token-display" id="balance">0</div>
+    <p style="color: #888;">Cost per Draw: 1 Token</p>
+    <button onclick="playDraw()" style="background: #ff4500; color: white;">DRAW & WIN GOLD</button>
+    <p id="result" style="margin-top: 20px; font-weight: bold;"></p>
+</div>
+
+<script>
+    let isLogin = true; let currentUser = "";
+    const overlay = document.getElementById('overlay');
+    const status = document.getElementById('status');
+
+    function swap() {
+        isLogin = !isLogin;
+        document.getElementById('title').innerText = isLogin ? "Gold Token Access" : "Create Gold Account";
+        document.getElementById('sw').innerText = isLogin ? "New user? Register here" : "Have an account? Login";
+    }
+
+    async function handleAuth() {
+        overlay.style.display = "flex";
+        status.innerText = "Connecting to Vault...";
+        const path = isLogin ? 'login' : 'register';
+        const res = await fetch('/.netlify/functions/api/' + path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('pass').value })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            currentUser = document.getElementById('email').value;
+            if (!isLogin) { alert(data.message); location.reload(); return; }
+            document.getElementById('auth-box').style.display = "none";
+            document.getElementById('dashboard').style.display = "block";
+            document.getElementById('balance').innerText = data.tokens;
+            overlay.style.display = "none";
+        } else {
+            overlay.style.display = "none";
+            alert(data.error);
         }
-        function toggle() {
-            isLogin = !isLogin;
-            document.getElementById('title').innerText = isLogin ? "Login" : "Register";
-            document.getElementById('toggle-text').innerText = isLogin ? "Need an account? Register" : "Back to Login";
-        }
-        async function submitData() {
-            const overlay = document.getElementById('overlay');
-            overlay.style.display = "flex";
-            const path = isLogin ? 'login' : 'register';
-            try {
-                const res = await fetch('/.netlify/functions/api/' + path, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email: document.getElementById('email').value,
-                        password: document.getElementById('pass').value,
-                        captchaId: capId,
-                        captchaAnswer: document.getElementById('ans').value
-                    })
-                });
-                const data = await res.json();
-                document.getElementById('status').innerText = data.message || data.error;
-                setTimeout(() => { 
-                    overlay.style.display = "none"; 
-                    if(data.message) alert(data.message);
-                }, 1500);
-            } catch (e) {
-                overlay.style.display = "none";
-                alert("Connection Error. Is Netlify building?");
-            }
-            getCaptcha();
-        }
-        getCaptcha();
-    </script>
+    }
+
+    async function playDraw() {
+        overlay.style.display = "flex";
+        status.innerText = "Drawing Token...";
+        const res = await fetch('/.netlify/functions/api/draw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: currentUser })
+        });
+        const data = await res.json();
+        setTimeout(() => {
+            overlay.style.display = "none";
+            document.getElementById('balance').innerText = data.newTotal;
+            document.getElementById('result').innerText = data.message;
+            document.getElementById('result').style.color = data.win ? "#ffd700" : "#ff4500";
+        }, 800);
+    }
+</script>
 </body>
 </html>
